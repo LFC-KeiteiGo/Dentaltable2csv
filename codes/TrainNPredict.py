@@ -37,6 +37,7 @@ model1.building_network(Conv1=('wc1', 'bc1'), Conv2=('wc2', 'bc2'), Maxpool1=2,
                         Conv5=('wc5', 'bc5'), Conv6=('wc6', 'bc6'), Maxpool3=2,
                         Conv7=('wc7', 'bc7'), FCL1=('wd1', 'bd1'))
 sess = tf.Session()
+model1.default_preproc()
 model1.train(sess, 'main')
 prediction_main = model1.predict(sess, 'main')
 sess.close()
@@ -60,6 +61,7 @@ model2.building_network(Conv1=('wc1', 'bc1'), Maxpool1=3,
                         Conv2=('wc2', 'bc2'), Maxpool2=3,
                         FCL1=('wd1', 'bd1'))
 sess = tf.Session()
+model2.default_preproc()
 model2.train(sess, 'sub')
 prediction_sub = model2.predict(sess, 'sub')
 sess.close()

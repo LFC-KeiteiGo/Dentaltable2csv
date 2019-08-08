@@ -78,6 +78,9 @@ class Model:
             self.biases[name] = self.weight_variable(name, self.shape, stdev)
         self.biases['out'] = self.weight_variable('out', [self.class_num], 1.0)
 
+    # Miracle Function **
+    # Model.building_network(Conv1=('wc1', 'bc1'), Maxpool1=3, FCL1=('wd1', 'bd1'))
+    #                        1st layer(attr) > 2nd layer(attr) > 3rd layer(attr)
     def building_network(self, **kwargs):
         size_x, size_y = self.size
         x = tf.reshape(self.x, shape=[-1, size_y, size_x, 1])
@@ -111,11 +114,12 @@ class Model:
         correct_pred = tf.equal(tf.argmax(prediction, 1), tf.argmax(self.y, 1))
         self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-    def train(self, sess, ms):
+    def default_preproc(self):
         self._loss_func()
         self._adam_optimize_operation()
         self._efficacy_check()
 
+    def train(self, sess, ms):
         self.dws.set_iter(self.steps_num)
         init = tf.global_variables_initializer()
         sess.run(init)
@@ -130,8 +134,7 @@ class Model:
                 loss, acc = sess.run([self.loss, self.accuracy], feed_dict={self.x: batch_x,
                                                                             self.y: batch_y,
                                                                             self.keep_prob: 1.0})
-                print("Step {}, Minibatch Loss= {:.4f}, Training Accuracy= {:.3f}".format(str(step),
-                                                                                          loss, acc))
+                print("Step {}, BatchLoss= {:.4f}, TrainAccuracy= {:.3f}".format(str(step), loss, acc))
         print("Optimization Finished!")
 
     def predict(self, sess, ms):
