@@ -1,0 +1,13 @@
+uncat/*
+MNIST-data/*
+AugmentorData/*
+RawData/*
+LocalData/*
+outputs/*
+numbers/*
+model/*
+uncategorized/*
+codes/test.py
+pre_model/*
+.idea/*
+.ipynb_checkpoints/*

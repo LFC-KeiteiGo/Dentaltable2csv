@@ -54,6 +54,11 @@ class Model:
         initial = tf.truncated_normal(shape, stddev=stdev)
         return tf.Variable(initial, name=name)
 
+    @staticmethod
+    def save_model(sess, path):
+        saver = tf.train.Saver()
+        saver.save(sess, path)
+
     def _add_layers(self, inputs, layer_type, param_names):
         if 'Conv' in layer_type:
             return self.conv2d(inputs, self.weights[param_names[0]], self.biases[param_names[1]])
@@ -118,6 +123,8 @@ class Model:
         self._loss_func()
         self._adam_optimize_operation()
         self._efficacy_check()
+
+
 
     def train(self, sess, ms):
         self.dws.set_iter(self.steps_num)

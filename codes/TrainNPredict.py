@@ -22,7 +22,7 @@ dws.pred_data_prep()
 dws.reset()
 # Training Parameters
 model1 = Model(dws, input_size=[28, 28], class_num=8, learning_rate=0.0007,
-               steps=25000, batch_size=128, drop_out=0.8)
+               steps=100000, batch_size=128, drop_out=0.8)
 # Set weights
 model1.create_weights(wc1=([4, 4, 1, 32], 1.0), wc2=([4, 4, 32, 32], 1/32),
                       wc3=([3, 3, 32, 64], 1/32), wc4=([3, 3, 64, 64], 1/32),
@@ -39,6 +39,7 @@ model1.building_network(Conv1=('wc1', 'bc1'), Conv2=('wc2', 'bc2'), Maxpool1=2,
 sess = tf.Session()
 model1.default_preproc()
 model1.train(sess, 'main')
+model1.save_model(sess, './model/model1/model1.ckpt')
 prediction_main = model1.predict(sess, 'main')
 sess.close()
 
@@ -49,7 +50,7 @@ sess.close()
 dws.reset()
 # Create place holders for data
 model2 = Model(dws, input_size=[45, 90], class_num=5, learning_rate=0.001,
-               steps=25000, batch_size=128, drop_out=0.75)
+               steps=120000, batch_size=128, drop_out=0.75)
 # Set weights
 model2.create_weights(wc1=([5, 5, 1, 32], 1/3), wc2=([5, 5, 32, 32], 1/32),
                       wd1=([10 * 5 * 32, 256], 1.0))
@@ -63,6 +64,7 @@ model2.building_network(Conv1=('wc1', 'bc1'), Maxpool1=3,
 sess = tf.Session()
 model2.default_preproc()
 model2.train(sess, 'sub')
+model2.save_model(sess, './model/model2/model2.ckpt')
 prediction_sub = model2.predict(sess, 'sub')
 sess.close()
 
