@@ -1,98 +1,153 @@
 import tensorflow as tf
+import numpy as np
 
 
-def conv2d(x, w, b, strides=1, padding='SAME'):
-    # Conv2D wrapper, with bias and relu activation
-    x = tf.nn.conv2d(x, w, strides=[1, strides, strides, 1], padding=padding)
-    x = tf.nn.bias_add(x, b)
-    return tf.nn.relu(x)
+class Model:
+    def __init__(self, datahouse, input_size, class_num, learning_rate,
+                 steps, batch_size, drop_out, display_step=100):
+        self.dws = datahouse
+        self.size = input_size
+        self.input_num = input_size[0]*input_size[1]
+        self.class_num = class_num
+        self.learning_rate = learning_rate
+        self.steps_num = steps
+        self.drop_out = drop_out
+        self.batch_size = batch_size
+        self.display_step = display_step
 
+        self.x = tf.compat.v1.placeholder(tf.float32, [None, self.input_num], name='X')
+        self.y = tf.compat.v1.placeholder(tf.float32, [None, self.class_num], name='Y')
+        self.val_x = tf.compat.v1.placeholder(tf.float32, [None, self.input_num], name='Val_X')
+        self.val_y = tf.compat.v1.placeholder(tf.float32, [None, self.class_num], name='Val_Y')
+        self.keep_prob = tf.compat.v1.placeholder(tf.float32, name='KP')
 
-def init_var(num_input, num_classes):
-    x = tf.compat.v1.placeholder(tf.float32, [None, num_input], name='X')
-    y = tf.compat.v1.placeholder(tf.float32, [None, num_classes], name='Y')
-    pred = tf.compat.v1.placeholder(tf.float32, [None, num_input], name='Pred')
-    keep_prob = tf.compat.v1.placeholder(tf.float32, name='KP')
-    return x, y, pred, keep_prob
+        self.weights = {}
+        self.biases = {}
+        self.network_train = None
+        self.network_valid = None
+        self.trainer = None
+        self.loss = None
+        self.accuracy = None
 
+        self.shape = None
 
-def maxpool2d(x, k=2):
-    # MaxPool2D wrapper
-    return tf.nn.max_pool2d(x, ksize=[1, k, k, 1], strides=[1, k, k, 1],
-                            padding='SAME')
+    @staticmethod
+    def conv2d(x, w, b, strides=1, padding='SAME'):
+        # Conv2D wrapper, with bias and relu activation
+        x = tf.nn.conv2d(x, w, strides=[1, strides, strides, 1], padding=padding)
+        x = tf.nn.bias_add(x, b)
+        return tf.nn.relu(x)
 
+    @staticmethod
+    def maxpool2d(x, k=2):
+        # MaxPool2D wrapper
+        return tf.nn.max_pool2d(x, ksize=[1, k, k, 1], strides=[1, k, k, 1], padding='SAME')
 
-# Create model
-def conv_net_main(x, weights, biases, rate, train, size):
-    size_x, size_y = size
-    # MNIST data input is a 1-D vector of 784 features (28*28 pixels)
-    # Reshape to match picture format [Height x Width x Channel]
-    # Tensor input become 4-D: [Batch Size, Height, Width, Channel]
-    x = tf.reshape(x, shape=[-1, size_y, size_x, 1])
+    @staticmethod
+    def fullyconnect(x, w, b):
+        x = tf.reshape(x, [-1, w.get_shape().as_list()[0]])
+        x = tf.add(tf.matmul(x, w), b)
+        return tf.nn.relu(x)
 
-    # Convolution Layer
-    conv1 = conv2d(x, weights['wc1'], biases['bc1'])
-    conv2 = conv2d(conv1, weights['wc2'], biases['bc2'])
-    # Max Pooling (down-sampling)
-    conv2 = maxpool2d(conv2, k=2)
+    @staticmethod
+    def weight_variable(name, shape, stdev):
+        initial = tf.truncated_normal(shape, stddev=stdev)
+        return tf.Variable(initial, name=name)
 
-    # Convolution Layer
-    conv3 = conv2d(conv2, weights['wc3'], biases['bc3'])
-    conv4 = conv2d(conv3, weights['wc4'], biases['bc4'])
-    # Max Pooling (down-sampling)
-    conv4 = maxpool2d(conv4, k=2)
+    def _add_layers(self, inputs, layer_type, param_names):
+        if 'Conv' in layer_type:
+            return self.conv2d(inputs, self.weights[param_names[0]], self.biases[param_names[1]])
+        if 'Maxpool' in layer_type:
+            return self.maxpool2d(inputs, param_names)
+        if 'FCL' in layer_type:
+            return self.fullyconnect(inputs, self.weights[param_names[0]], self.biases[param_names[1]])
 
-    # Convolution Layer
-    conv5 = conv2d(conv4, weights['wc5'], biases['bc5'])
-    conv6 = conv2d(conv5, weights['wc6'], biases['bc6'])
-    # Max Pooling (down-sampling)
-    conv6 = maxpool2d(conv6, k=2)
+    # Model.create_weights(wc1=([kenel_x, kernek_y, inpu_num, filter_count], stdev),
+    #                      wc2=([kenel_x, kernek_y, inpu_num, filter_count], stdev))
+    def create_weights(self, **kwargs):
+        for name, stats in kwargs.items():
+            self.shape, stdev = stats
+            self.weights[name] = self.weight_variable(name, self.shape, stdev)
+        self.weights['out'] = self.weight_variable('out', [self.shape[-1], self.class_num], 1.0)
 
-    # Convolution Layer
-    conv7 = conv2d(conv6, weights['wc7'], biases['bc7'])
+    # Model.create_biases(bc1=([filter_count], stdev),
+    #                     bc2=([filter_count], stdev))
+    def create_biases(self, **kwargs):
+        for name, stats in kwargs.items():
+            self.shape, stdev = stats
+            self.biases[name] = self.weight_variable(name, self.shape, stdev)
+        self.biases['out'] = self.weight_variable('out', [self.class_num], 1.0)
 
-    # Fully connected layer
-    # Reshape conv2 output to fit fully connected layer input
-    fc1 = tf.reshape(conv7, [-1, weights['wd1'].get_shape().as_list()[0]])
-    fc1 = tf.add(tf.matmul(fc1, weights['wd1']), biases['bd1'])
-    fc1 = tf.nn.relu(fc1)
+    def building_network(self, **kwargs):
+        size_x, size_y = self.size
+        x = tf.reshape(self.x, shape=[-1, size_y, size_x, 1])
+        val = tf.reshape(self.val_x, shape=[-1, size_y, size_x, 1])
 
-    # Apply Dropout
-    if train:
-        fc1 = tf.nn.dropout(fc1, rate)
+        value_train = None
+        value_valid = None
+        net_first = True
 
-    # Output, class prediction
-    out = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
-    return out
+        for layer_type, param_names in kwargs.items():
+            if net_first:
+                value_train = self._add_layers(x, layer_type, param_names)
+                value_valid = self._add_layers(val, layer_type, param_names)
+                net_first = False
+            value_train = self._add_layers(value_train, layer_type, param_names)
+            value_valid = self._add_layers(value_valid, layer_type, param_names)
+        value_train = tf.nn.dropout(value_train, self.keep_prob)
+        self.network_train = tf.add(tf.matmul(value_train, self.weights['out']), self.biases['out'])
+        self.network_valid = tf.add(tf.matmul(value_valid, self.weights['out']), self.biases['out'])
 
+    def _loss_func(self):
+        t = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.network_train, labels=self.y)
+        self.loss = tf.reduce_mean(t)
 
-# Create model
-def conv_net_sub(x, weights, biases, dropout, train, size):
-    size_x, size_y = size
-    # Reshape to match picture format [Height x Width x Channel]
-    # Tensor input become 4-D: [Batch Size, Height, Width, Channel]
-    x = tf.reshape(x, shape=[-1, size_y, size_x, 1])
+    def _adam_optimize_operation(self):
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+        self.trainer = optimizer.minimize(self.loss)
 
-    # Convolution Layer
-    conv1 = conv2d(x, weights['wc1'], biases['bc1'])
-    # Max Pooling (down-sampling)
-    conv1 = maxpool2d(conv1, k=3)
+    def _efficacy_check(self):
+        prediction = tf.nn.softmax(self.network_train)
+        correct_pred = tf.equal(tf.argmax(prediction, 1), tf.argmax(self.y, 1))
+        self.accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-    # Convolution Layer
-    conv2 = conv2d(conv1, weights['wc2'], biases['bc2'])
-    # Max Pooling (down-sampling)
-    conv2 = maxpool2d(conv2, k=3)
+    def train(self, sess, ms):
+        self._loss_func()
+        self._adam_optimize_operation()
+        self._efficacy_check()
 
-    # Fully connected layer
-    # Reshape conv2 output to fit fully connected layer input
-    fc1 = tf.reshape(conv2, [-1, weights['wd1'].get_shape().as_list()[0]])
-    fc1 = tf.add(tf.matmul(fc1, weights['wd1']), biases['bd1'])
-    fc1 = tf.nn.relu(fc1)
+        self.dws.set_iter(self.steps_num)
+        init = tf.global_variables_initializer()
+        sess.run(init)
 
-    # Apply Dropout
-    if train:
-        fc1 = tf.nn.dropout(fc1, dropout)
+        for step in range(1, self.steps_num + 1):
+            batch_x, batch_y = self.dws.serve_dish_train(ms, self.batch_size)
+            # Run optimization op (backprop)
+            sess.run(self.trainer, feed_dict={self.x: batch_x, self.y: batch_y,
+                                              self.keep_prob: self.drop_out})
+            if step % self.display_step == 0 or step == 1:
+                # Calculate batch loss and accuracy
+                loss, acc = sess.run([self.loss, self.accuracy], feed_dict={self.x: batch_x,
+                                                                            self.y: batch_y,
+                                                                            self.keep_prob: 1.0})
+                print("Step {}, Minibatch Loss= {:.4f}, Training Accuracy= {:.3f}".format(str(step),
+                                                                                          loss, acc))
+        print("Optimization Finished!")
 
-    # Output, class prediction
-    out = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
-    return out
+    def predict(self, sess, ms):
+        predict = tf.nn.softmax(self.network_valid)
+        f_lists = self.dws.listm_pred if ms is 'main' else self.dws.lists_pred
+        p_datas = self.dws.datam_pred if ms is 'main' else self.dws.datas_pred
+        first_pred = True
+        predictions = None  # Pre-declaration of variable
+
+        for idx_start in range(0, len(f_lists), self.batch_size):
+            data_seg = p_datas[idx_start:min((idx_start + self.batch_size), len(f_lists))]
+            pred_seg = sess.run(predict, feed_dict={self.val_x: data_seg, self.keep_prob: 1.0})
+            if first_pred:
+                predictions = pred_seg
+                first_pred = False
+                continue
+            predictions = np.vstack((predictions, pred_seg))
+
+        return predictions

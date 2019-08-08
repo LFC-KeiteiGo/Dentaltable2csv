@@ -83,7 +83,7 @@ class DataHouse:
     @staticmethod
     def _data_check(data, ms):
         thres = 784 if ms is 'main' else 4050
-        if data.shape[1] == thres & all([x > 0.4 for x in list(data.mean(axis=1))]):
+        if (data.shape[1] == thres) & (all([x > 0.3 for x in list(data.mean(axis=1))])):
             return True
         else:
             return False
