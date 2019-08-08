@@ -73,6 +73,21 @@ class DataHouse:
         files_sub = [file for status in statuses for file in files_list if status in file]
         return files_sub
 
+    @staticmethod
+    def _concatstack(arrays):
+        concat_array = arrays[0]
+        for array in arrays[1:]:
+            concat_array = np.vstack((concat_array, array))
+        return concat_array
+
+    @staticmethod
+    def _data_check(data, ms):
+        thres = 784 if ms is 'main' else 4050
+        if data.shape[1] == thres & all([x > 0.4 for x in list(data.mean(axis=1))]):
+            return True
+        else:
+            return False
+
     def _augunitsprep(self, count, process_list):
         aug_imgs = []
         aug_labels = []
@@ -85,7 +100,7 @@ class DataHouse:
 
     def _mnistdata_prep(self):
         mnist_imgs_all, mnist_labels_all = self.mnist.train.next_batch(50000)
-        ng_labels = [self._npclass(10, 0), self._npclass(10,8), self._npclass(10,9)]
+        ng_labels = [self._npclass(10, 0), self._npclass(10, 8), self._npclass(10, 9)]
         ng_idx = []
 
         for i, label in enumerate(mnist_labels_all):
@@ -152,7 +167,7 @@ class DataHouse:
         return external_imgs, external_labels
 
     def _augmentdatam_prep(self, count):
-        # tupleformat = (foldername, classlength, class)
+        # tupleformat -> (foldername, classlength, class)
         aug_main_stat = [('blank28', 8, 0), ('1', 8, 1), ('7', 8, 7)]
         aug_imgs, aug_labels = self._augunitsprep(count, aug_main_stat)
 
@@ -161,8 +176,8 @@ class DataHouse:
         return aug_imgs, aug_labels
 
     def _augmentdatas_prep(self, count):
-        # class_sub = ['blank', 'slash', 'exist', 'implant', 'etc']
-        # tupleformat = (foldername, classlength, class)
+        # class_sub -> ['blank', 'slash', 'exist', 'implant', 'etc']
+        # tupleformat -> (foldername, classlength, class)
         aug_main_stat = [('blank45', 5, 0), ('slice', 5, 1), ('exist', 5, 2),
                          ('implant', 5, 3), ('etc', 5, 4)]
         aug_imgs, aug_labels = self._augunitsprep(count, aug_main_stat)
@@ -208,13 +223,8 @@ class DataHouse:
         print('Loading External Data...')
         data_x_external, data_y_external = self._externaldata_prep(ext_count)
 
-        self.datam_x = np.vstack((data_x_local, 1 - data_x_mnist))
-        self.datam_x = np.vstack((self.datam_x, data_x_external))
-        self.datam_x = np.vstack((self.datam_x, data_x_aug))
-
-        self.datam_y = np.vstack((data_y_local, data_y_mnist))
-        self.datam_y = np.vstack((self.datam_y, data_y_external))
-        self.datam_y = np.vstack((self.datam_y, data_y_aug))
+        self.datam_x = self._concatstack((data_x_local, 1 - data_x_mnist, data_x_external, data_x_aug))
+        self.datam_y = self._concatstack((data_y_local, data_y_mnist, data_y_external, data_y_aug))
 
         print('Loading Local KANJI Data...')
         datas_x_local, datas_y_local = self._localdata_prep(['r', 'd', 'h', 'i', 'e'], 'sub')
@@ -226,6 +236,15 @@ class DataHouse:
     def pred_data_prep(self):
         self.datam_pred, self.listm_pred = self._preddatams_prep('main')
         self.datas_pred, self.lists_pred = self._preddatams_prep('sub')
+
+    def alldata_check(self):
+        name_data = ['datam_x', 'datas_x', 'datam_pred', 'datas_pred']
+        test_check = [self._data_check(self.datam_x, 'main'), self._data_check(self.datas_x, 'sub'),
+                      self._data_check(self.datam_pred, 'main'), self._data_check(self.datas_pred, 'sub')]
+        if all(test_check):
+            print('Shape and value range of all data checked, readu to ride!')
+        else:
+            print('{} has different shape or value, checked again.'.format(name_data[test_check.index(False)]))
 
     def serve_dish_train(self, mode, batch_size):
         data_size = None
@@ -254,5 +273,3 @@ class DataHouse:
             batch_y = [self.datas_y[i] for i in rand_batch_list]
 
         return batch_x, batch_y
-
-
