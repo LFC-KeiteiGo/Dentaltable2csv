@@ -12,10 +12,10 @@ mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
 dws = DataHouse()
 
 dws.mnist = mnist
-dws.local_marked_path = 'C:/Users/neilc/Projects/Dental_Panorama/image_dataformat/Annotated/done/'
-dws.external_data_path = 'C:/Users/neilc/GitHub/numbers/'
-dws.augment_data_path = 'C:/Users/neilc/Projects/Dental_Panorama/AugmentorData/'
-dws.pred_data_path = 'C:/Users/neilc/Projects/Dental_Panorama/image_dataformat/output_cellparsed/'
+dws.local_marked_path = './LocalData/Annotated/done/'
+dws.external_data_path = './numbers/'  # Credits to https://github.com/kensanata/numbers
+dws.augment_data_path = './AugmentorData/'
+dws.pred_data_path = './LocalData/output_cellparsed/'
 
 dws.train_data_prep(aug_count=8000, ext_count=8000)  # Tune Traindata
 dws.pred_data_prep()
