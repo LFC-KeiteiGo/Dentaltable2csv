@@ -4,7 +4,7 @@ import re
 import os
 import cv2
 import tensorflow as tf
-from codes.data_house import concatstack
+from utils.data_house import concatstack
 
 
 def extract_file(pnum, pred_class, pred_file):

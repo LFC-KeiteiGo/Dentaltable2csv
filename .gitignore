@@ -8,6 +8,7 @@ numbers/*
 model/*
 uncategorized/*
 codes/test.py
+codes/__pycache__
 pre_model/*
 .idea/*
 .ipynb_checkpoints/*

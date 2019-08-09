@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-from codes.data_house import DataHouse
-from codes.tensor_model import Model
+from utils.data_house import DataHouse
+from utils.tensor_model import Model
 from tensorflow.examples.tutorials.mnist import input_data
 
 dws = DataHouse()
