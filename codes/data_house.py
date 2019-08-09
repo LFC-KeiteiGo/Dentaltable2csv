@@ -6,6 +6,13 @@ import random
 from math import ceil
 
 
+def concatstack(arrays):
+    concat_array = arrays[0]
+    for array in arrays[1:]:
+        concat_array = np.vstack((concat_array, array))
+    return concat_array
+
+
 class DataHouse:
     def __init__(self):
         self.mnist = None
@@ -72,13 +79,6 @@ class DataHouse:
             statuses = ["ApicalLesion", "Others"]
         files_sub = [file for status in statuses for file in files_list if status in file]
         return files_sub
-
-    @staticmethod
-    def _concatstack(arrays):
-        concat_array = arrays[0]
-        for array in arrays[1:]:
-            concat_array = np.vstack((concat_array, array))
-        return concat_array
 
     @staticmethod
     def _data_check(data, ms):
@@ -223,8 +223,8 @@ class DataHouse:
         print('Loading External Data...')
         data_x_external, data_y_external = self._externaldata_prep(ext_count)
 
-        self.datam_x = self._concatstack((data_x_local, 1 - data_x_mnist, data_x_external, data_x_aug))
-        self.datam_y = self._concatstack((data_y_local, data_y_mnist, data_y_external, data_y_aug))
+        self.datam_x = concatstack((data_x_local, 1 - data_x_mnist, data_x_external, data_x_aug))
+        self.datam_y = concatstack((data_y_local, data_y_mnist, data_y_external, data_y_aug))
 
         print('Loading Local KANJI Data...')
         datas_x_local, datas_y_local = self._localdata_prep(['r', 'd', 'h', 'i', 'e'], 'sub')
