@@ -153,7 +153,7 @@ class ImageFormatTable:
 
         first_col = True
         first_row = True
-        its_slash = True
+        its_slash = False
 
         col_img = None
         big_topimg = None
@@ -202,7 +202,7 @@ class ImageFormatTable:
         bot_situ = ['Others', 'ApicalLesion', 'Alveolar', 'Caries']
         first_col = True
         first_row = True
-        its_slash = True
+        its_slash = False
 
         col_img = None
         big_botimg = None
@@ -292,6 +292,7 @@ def standard_table(path, data_house, class_main, class_sub):
              'RD1', 'RD2', 'RD3', 'RD4', 'RD5', 'RD6', 'RD7', 'RD8', 'RU1', 'RU2', 'RU3', 'RU4', 'RU5', 'RU6', 'RU7',
              'RU8']
     notations_main = ['0', '1', '2', '3', '4', '5', '6', '7']
+    notations_apical = ['0', '0', '1', '0', '0']
 
     data = ['No', 'Pos', 'Exist', 'Caries', 'PeriodontalDisease', 'ApicalLesion']
     template = pd.DataFrame(columns=data)
@@ -321,12 +322,12 @@ def standard_table(path, data_house, class_main, class_sub):
             new_row['Caries'] = notations_main[status_caries.index(max(status_caries))]
 
             # Check Periodontal
-            status_caries = [classes[file_names.index(x)] for x in files_tooth if 'Alveolar' in x][0]
-            new_row['PeriodontalDisease'] = notations_main[status_caries.index(max(status_caries))]
+            status_perio = [classes[file_names.index(x)] for x in files_tooth if 'Alveolar' in x][0]
+            new_row['PeriodontalDisease'] = notations_main[status_perio.index(max(status_perio))]
 
             # Check Apical
-            status_caries = [classes[file_names.index(x)] for x in files_tooth if 'ApicalLesion' in x][0]
-            new_row['ApicalLesion'] = notations_main[status_caries.index(max(status_caries))]
+            status_apical = [classes[file_names.index(x)] for x in files_tooth if 'ApicalLesion' in x][0]
+            new_row['ApicalLesion'] = notations_apical[status_apical.index(max(status_apical))]
 
             template = pd.concat([template, new_row], ignore_index=True)
     return template

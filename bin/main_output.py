@@ -35,4 +35,3 @@ img_creator = ImageFormatTable('LocalData/output_cellparsed', dws, prediction_ma
 for pnum in pnums:
     img = img_creator.do(pnum)
     cv2.imwrite('outputs/'+pnum+'.jpg', img)
-
